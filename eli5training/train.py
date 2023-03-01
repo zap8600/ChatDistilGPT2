@@ -3,12 +3,12 @@ from datasets import load_dataset
 import huggingface_hub
 from transformers import AutoTokenizer, AutoModelForCausalLM, DataCollatorForLanguageModeling, TrainingArguments, Trainer, pipeline
 
-huggingface_hub.login("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")
+huggingface_hub.login(input("HuggingFace Login Token: "))
 
 huggingface_hub.notebook_login()
 
-tokenizer = AutoTokenizer.from_pretrained("./models")
-model = AutoModelForCausalLM.from_pretrained("./models")
+tokenizer = AutoTokenizer.from_pretrained("./model")
+model = AutoModelForCausalLM.from_pretrained("./model")
 
 eli5 = load_dataset("eli5", split="train_asks[:5000]")
 eli5 = eli5.train_test_split(test_size=0.2)
@@ -44,7 +44,7 @@ tokenizer.pad_token = tokenizer.eos_token
 data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
 training_args = TrainingArguments(
-    output_dir="my_awesome_eli5_clm-model",
+    output_dir="eli5-model",
     evaluation_strategy="epoch",
     learning_rate=2e-5,
     weight_decay=0.01,
@@ -65,16 +65,3 @@ eval_results = trainer.evaluate()
 print(f"Perplexity: {math.exp(eval_results['eval_loss']):.2f}")
 
 trainer.push_to_hub()
-
-prompt = "Somatic hypermutation allows the immune system to"
-
-generator = pipeline("text-generation", model="my_awesome_eli5_clm-model")
-generator(prompt)
-
-tokenizer = AutoTokenizer.from_pretrained("my_awesome_eli5_clm-model")
-inputs = tokenizer(prompt, return_tensors="pt").input_ids
-
-model = AutoModelForCausalLM.from_pretrained("my_awesome_eli5_clm-model")
-outputs = model.generate(inputs, max_new_tokens=100, do_sample=True, top_k=50, top_p=0.95)
-
-tokenizer.batch_decode(outputs, skip_special_tokens=True)
